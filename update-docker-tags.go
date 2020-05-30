@@ -17,8 +17,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO: make this not Sourcegraph-specific
 var TAG_PATTERN = regexp.MustCompile(`(sourcegraph/.+):(.+)@(sha256:[[:alnum:]]+)`)
+var GENERIC_TAG_PATTERN = regexp.MustCompile(` (\S+.+):(.+)@(sha256:[[:alnum:]]+)`) //https://regex101.com/r/hP8bK1/37
 
 var constraintArgs rawConstraints
 
@@ -30,7 +30,9 @@ Usage:
 	update-docker-tags [options] < FILE | FOLDER >...
 
 Options:
-	--constraint (repeatable) enforce a semver constraint for a given docker image
+	--constraint  (repeatable) enforce a semver constraint for a given docker image
+	--generic     generic matches additional docker image tags
+	--tag-pattern specify a custom regexp to match docker image tags
 
 Examples:
 
@@ -45,6 +47,8 @@ Examples:
 		os.Exit(2)
 	}
 	flag.Var(&constraintArgs, "constraint", "(repeatable) add a semver constraint for a given docker image")
+	useGeneric := flag.Bool("generic", false, "generic matches additional docker image tags")
+	customPattern := flag.String("tag-pattern", "", "specify a custom regexp to match docker image tags")
 	flag.Parse()
 
 	parsedConstraints, err := constraintArgs.parse()
@@ -57,10 +61,23 @@ Examples:
 		flag.Usage()
 		os.Exit(2)
 	}
+	var tagPattern *regexp.Regexp
+	if *customPattern != "" {
+		var err error
+		tagPattern, err = regexp.Compile(*customPattern)
+		if err != nil {
+			log.Fatalf("failed to parse custom regex, err: %s", err)
+		}
+	} else if *useGeneric {
+		tagPattern = GENERIC_TAG_PATTERN
+	} else {
+		tagPattern = TAG_PATTERN
+	}
 
 	o := &options{
 		constraints: parsedConstraints,
 		filePaths:   paths,
+		tagPattern:  tagPattern,
 	}
 
 	for _, root := range o.filePaths {
@@ -93,7 +110,7 @@ func updateDockerTags(o *options, root string) error {
 
 		// replaceErr is a workaround for replaceAllSubmatchFunc not propagating errors
 		var replaceErr error
-		data = replaceAllSubmatchFunc(TAG_PATTERN, data, func(groups [][]byte) [][]byte {
+		data = replaceAllSubmatchFunc(o.tagPattern, data, func(groups [][]byte) [][]byte {
 
 			repositoryName := string(groups[0])
 			repository, err := newRepository(o, repositoryName)
@@ -365,6 +382,7 @@ func (rc *rawConstraints) parse() (map[string]*semver.Constraints, error) {
 type options struct {
 	constraints map[string]*semver.Constraints
 	filePaths   []string
+	tagPattern  *regexp.Regexp
 }
 
 func newRepository(o *options, repositoryName string) (*repository, error) {
