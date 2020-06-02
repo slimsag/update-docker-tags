@@ -48,7 +48,7 @@ Examples:
 	}
 	flag.Var(&constraintArgs, "constraint", "(repeatable) add a semver constraint for a given docker image")
 	useGeneric := flag.Bool("generic", false, "generic matches additional docker image tags")
-	customPattern := flag.String("tag-pattern", "", "specify a custom regexp to match docker image tags")
+	customPattern := flag.String("pattern", "", "specify a custom regexp to match docker images")
 	flag.Parse()
 
 	parsedConstraints, err := constraintArgs.parse()
