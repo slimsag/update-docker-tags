@@ -66,7 +66,7 @@ Examples:
 		var err error
 		tagPattern, err = regexp.Compile(*customPattern)
 		if err != nil {
-			log.Fatalf("failed to parse custom regex, err: %s", err)
+			log.Fatalf("failed to parse custom regex: %s", err)
 		}
 	} else if *useGeneric {
 		tagPattern = GENERIC_TAG_PATTERN
