@@ -238,6 +238,9 @@ func filterFlavor(tag string, ver semver.Collection) semver.Collection {
 //  $ curl -s -D - -H "Authorization: Bearer $token" -H "Accept: application/vnd.docker.distribution.manifest.v2+json" https://index.docker.io/v2/sourcegraph/server/manifests/3.12.1 | grep Docker-Content-Digest
 //
 func (r *repository) fetchImageDigest(tag string) (string, error) {
+	if strings.Contains(r.name, "quay.io") {
+		return r.fetchQuayImageDigest(tag)
+	}
 	req, err := http.NewRequest("GET", "https://index.docker.io/v2/"+r.name+"/manifests/"+tag, nil)
 	if err != nil {
 		return "", err
@@ -253,6 +256,37 @@ func (r *repository) fetchImageDigest(tag string) (string, error) {
 	defer resp.Body.Close()
 
 	return resp.Header.Get("Docker-Content-Digest"), nil
+}
+
+// Effectively curl -L https://quay.io/api/v1/repository/prometheus/busybox-linux-amd64/tag/
+func (r *repository) fetchQuayImageDigest(tag string) (string, error) {
+	name := strings.Trim(r.name, "quay.io/")
+	req, err := http.NewRequest("GET", "https://quay.io/api/v1/repository/"+name+"/tag", nil)
+	if err != nil {
+		return "", err
+	}
+	q := req.URL.Query()
+	q.Add("onlyActiveTags", "true")
+	q.Add("specificTag", tag)
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	vf := struct {
+		Tags []struct {
+			ManifestDigest string `json:"manifest_digest"`
+		}
+	}{}
+	err = json.NewDecoder(resp.Body).Decode(&vf)
+	if err != nil || len(vf.Tags) != 1 {
+		return "", fmt.Errorf("unable to decode quay.io response: %v", err)
+	}
+	return vf.Tags[0].ManifestDigest, nil
+
 }
 
 // Effectively the same as:
