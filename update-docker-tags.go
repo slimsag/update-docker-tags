@@ -238,16 +238,17 @@ func filterFlavor(tag string, ver semver.Collection) semver.Collection {
 //  $ curl -s -D - -H "Authorization: Bearer $token" -H "Accept: application/vnd.docker.distribution.manifest.v2+json" https://index.docker.io/v2/sourcegraph/server/manifests/3.12.1 | grep Docker-Content-Digest
 //
 func (r *repository) fetchImageDigest(tag string) (string, error) {
-	registry, err := parseRegistry(r.name)
+	registry, repo, err := parseRegistry(r.name)
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest("GET", registry+r.name+"/manifests/"+tag, nil)
+	req, err := http.NewRequest("GET", registry+repo+"/manifests/"+tag, nil)
 	if err != nil {
 		return "", err
 	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", r.authToken))
+	if registry == "https://index.docker.io/v2/" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", r.authToken))
+	}
 	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -258,45 +259,14 @@ func (r *repository) fetchImageDigest(tag string) (string, error) {
 
 	return resp.Header.Get("Docker-Content-Digest"), nil
 }
-func parseRegistry(reg string) (string, error) {
+func parseRegistry(reg string) (registry, repo string, err error) {
 	val := strings.Split(reg, "/")
 	if len(val) < 3 {
-		return "https://index.docker.io/v2/", nil
+		return "https://index.docker.io/v2/", reg, nil
 	} else if len(val) > 3 {
-		return "", fmt.Errorf("parsing error, expected \" %s \" to contain only 3 / ", reg)
+		return "", "", fmt.Errorf("parsing error, expected \" %s \" to contain only 3 / ", reg)
 	}
-	return "https://" + val[0] + "/v2/", nil
-}
-
-// Effectively curl -L https://quay.io/api/v1/repository/prometheus/busybox-linux-amd64/tag/
-func (r *repository) fetchQuayImageDigest(tag string) (string, error) {
-	name := strings.Trim(r.name, "quay.io/")
-	req, err := http.NewRequest("GET", "https://quay.io/api/v1/repository/"+name+"/tag", nil)
-	if err != nil {
-		return "", err
-	}
-	q := req.URL.Query()
-	q.Add("onlyActiveTags", "true")
-	q.Add("specificTag", tag)
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	vf := struct {
-		Tags []struct {
-			ManifestDigest string `json:"manifest_digest"`
-		}
-	}{}
-	err = json.NewDecoder(resp.Body).Decode(&vf)
-	if err != nil || len(vf.Tags) != 1 {
-		return "", fmt.Errorf("unable to decode quay.io response: %v", err)
-	}
-	return vf.Tags[0].ManifestDigest, nil
-
+	return "https://" + val[0] + "/v2/", val[1] + "/" + val[2], nil
 }
 
 // Effectively the same as:
