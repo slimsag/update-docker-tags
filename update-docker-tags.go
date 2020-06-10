@@ -294,11 +294,14 @@ func fetchAuthToken(repositoryName string) (string, error) {
 // 	$ curl -H "Authorization: Bearer $token" https://index.docker.io/v2/sourcegraph/server/tags/list
 //
 func (r *repository) fetchAllTags() ([]string, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://index.docker.io/v2/%s/tags/list", r.name), nil)
+	registry, repo, err := parseRegistry(r.name)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s%s/tags/list", registry, repo), nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+r.authToken)
+	if registry == "https://index.docker.io/v2/" {
+		req.Header.Set("Authorization", "Bearer "+r.authToken)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
