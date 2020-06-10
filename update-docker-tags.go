@@ -238,10 +238,11 @@ func filterFlavor(tag string, ver semver.Collection) semver.Collection {
 //  $ curl -s -D - -H "Authorization: Bearer $token" -H "Accept: application/vnd.docker.distribution.manifest.v2+json" https://index.docker.io/v2/sourcegraph/server/manifests/3.12.1 | grep Docker-Content-Digest
 //
 func (r *repository) fetchImageDigest(tag string) (string, error) {
-	if strings.Contains(r.name, "quay.io") {
-		return r.fetchQuayImageDigest(tag)
+	registry, err := parseRegistry(r.name)
+	if err != nil {
+		return "", err
 	}
-	req, err := http.NewRequest("GET", "https://index.docker.io/v2/"+r.name+"/manifests/"+tag, nil)
+	req, err := http.NewRequest("GET", registry+r.name+"/manifests/"+tag, nil)
 	if err != nil {
 		return "", err
 	}
@@ -256,6 +257,15 @@ func (r *repository) fetchImageDigest(tag string) (string, error) {
 	defer resp.Body.Close()
 
 	return resp.Header.Get("Docker-Content-Digest"), nil
+}
+func parseRegistry(reg string) (string, error) {
+	val := strings.Split(reg, "/")
+	if len(val) < 3 {
+		return "https://index.docker.io/v2/", nil
+	} else if len(val) > 3 {
+		return "", fmt.Errorf("parsing error, expected \" %s \" to contain only 3 / ", reg)
+	}
+	return "https://" + val[0] + "/v2/", nil
 }
 
 // Effectively curl -L https://quay.io/api/v1/repository/prometheus/busybox-linux-amd64/tag/
