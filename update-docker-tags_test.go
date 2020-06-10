@@ -22,14 +22,14 @@ func Test_genericTag(t *testing.T) {
 			"prom/prometheus",
 		},
 		{
-			"quay",
-			"FROM quay.io/prometheus/busybox-linux-amd64:latest@sha256:0c38f63cbe19e40123668a48c36466ef72b195e723cbfcbe01e9657a5f14cec6",
-			"quay.io/prometheus/busybox-linux-amd64",
+			"golang",
+			"FROM golang:1.13-alpine@sha256:ed003971a4809c9ae45afe2d318c24b9e3f6b30864a322877c69a46c504d852c AS builder",
+			"golang:1.13-alpine",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := TAG_PATTERN.FindAllStringSubmatch(tt.image, -1)
+			got := PATTERN.FindAllStringSubmatch(tt.image, -1)
 			if got[0][1] != tt.repo {
 				t.Errorf("got = %v, want %v", got, tt.repo)
 			}

@@ -17,8 +17,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-var TAG_PATTERN = regexp.MustCompile(`(sourcegraph/.+):(.+)@(sha256:[[:alnum:]]+)`)
-var PATTERN = regexp.MustCompile(`\b(\S+.+):(.+)@(sha256:[[:alnum:]]+)`) // https://regex101.com/r/hP8bK1/38
+var SCRGRAPH_PATTERN = regexp.MustCompile(`(sourcegraph/.+):(.+)@(sha256:[[:alnum:]]+)`)
+var PATTERN = regexp.MustCompile(`\b (\S+.+):(.+)@(sha256:[[:alnum:]]+)`) // https://regex101.com/r/hP8bK1/38
 
 var constraintArgs rawConstraints
 
@@ -71,7 +71,7 @@ Examples:
 	} else if *useGeneric {
 		tagPattern = PATTERN
 	} else {
-		tagPattern = TAG_PATTERN
+		tagPattern = SCRGRAPH_PATTERN
 	}
 
 	o := &options{
