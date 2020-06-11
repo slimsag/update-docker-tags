@@ -17,8 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var SCRGRAPH_PATTERN = regexp.MustCompile(`(sourcegraph/.+):(.+)@(sha256:[[:alnum:]]+)`)
-var PATTERN = regexp.MustCompile(`\b (\S+.+):(.+)@(sha256:[[:alnum:]]+)`) // https://regex101.com/r/hP8bK1/38
+var PATTERN = regexp.MustCompile(`\b (\S+.+):(.+)@(sha256:[[:alnum:]]+)`) // https://regex101.com/r/hP8bK1/39
 
 var constraintArgs rawConstraints
 
@@ -47,7 +46,6 @@ Examples:
 		os.Exit(2)
 	}
 	flag.Var(&constraintArgs, "constraint", "(repeatable) add a semver constraint for a given docker image")
-	useGeneric := flag.Bool("generic", false, "generic matches additional docker image tags")
 	customPattern := flag.String("pattern", "", "specify a custom regexp to match docker images")
 	flag.Parse()
 
@@ -68,10 +66,8 @@ Examples:
 		if err != nil {
 			log.Fatalf("failed to parse custom regex: %s", err)
 		}
-	} else if *useGeneric {
-		tagPattern = PATTERN
 	} else {
-		tagPattern = SCRGRAPH_PATTERN
+		tagPattern = PATTERN
 	}
 
 	o := &options{
