@@ -30,8 +30,7 @@ Usage:
 
 Options:
 	--constraint  (repeatable) enforce a semver constraint for a given docker image
-	--generic     generic matches additional docker image tags
-	--tag-pattern specify a custom regexp to match docker image tags
+	--pattern     specify a custom regexp to match docker image tags
 
 Examples:
 
