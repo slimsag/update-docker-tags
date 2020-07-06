@@ -45,7 +45,7 @@ Examples:
 		os.Exit(2)
 	}
 	flag.Var(&constraintArgs, "constraint", "(repeatable) add a semver constraint for a given docker image")
-	pattern := flag.String("pattern", defaultPattern, "specify a custom regexp to match docker images")
+	patternArg := flag.String("pattern", defaultPattern, "specify a custom regexp to match docker images")
 	flag.Parse()
 
 	parsedConstraints, err := constraintArgs.parse()
@@ -58,9 +58,9 @@ Examples:
 		flag.Usage()
 		os.Exit(2)
 	}
-	tagPattern, err := regexp.Compile(*pattern)
+	tagPattern, err := regexp.Compile(*patternArg)
 	if err != nil {
-		log.Fatalf("failed to parse --pattern regex: %s: %s", *pattern, err)
+		log.Fatalf("failed to parse --pattern regex: %s: %s", *patternArg, err)
 	}
 	o := &options{
 		constraints: parsedConstraints,
