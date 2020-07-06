@@ -179,9 +179,6 @@ func (r *repository) findLatestSemverTag(originalTag string) (string, error) {
 		if err != nil {
 			continue // ignore non-semver tags
 		}
-		if v.Minor() == 0 { //might just want to exclude alpine all together
-			continue //ignore values like 123124123.0.0
-		}
 
 		if r.constraint != nil {
 			if r.constraint.Check(v) {
@@ -196,30 +193,9 @@ func (r *repository) findLatestSemverTag(originalTag string) (string, error) {
 		return "", fmt.Errorf("no semver tags found for %q", r.name)
 	}
 
-	versions = filterFlavor(originalTag, versions)
-
 	sort.Sort(sort.Reverse(semver.Collection(versions)))
 	latestTag := versions[0].Original()
 	return latestTag, nil
-}
-
-func filterFlavor(tag string, ver semver.Collection) semver.Collection {
-	s := strings.Split(tag, "-")
-	if len(s) <= 1 { //no flavor, no-op
-		return ver
-	}
-	if len(s) > 2 {
-		log.Println("too many \"-\" to determine if this image has a flavor, check results")
-		return ver
-	}
-	flavor := s[1]
-	var vs semver.Collection
-	for _, v := range ver {
-		if strings.Contains(v.String(), flavor) {
-			vs = append(vs, v)
-		}
-	}
-	return vs
 }
 
 // Effectively the same as:
