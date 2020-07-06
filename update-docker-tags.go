@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var defaultPattern = `\b (\S+.+):(.+)@(sha256:[[:alnum:]]+)`
+var defaultPattern = `\b([[:alnum:]/\.\-]+):(.+)@(sha256:[[:alnum:]]+)\b`
 
 var constraintArgs rawConstraints
 
