@@ -150,9 +150,12 @@ func updateDockerTags(o *options, root string) error {
 	})
 }
 
+// repository describes a repository on a Docker registry and provides an API
+// for querying information about it.
 type repository struct {
-	name       string
-	constraint *semver.Constraints
+	name           string
+	registry, repo string // TODO: why is repo separate from the repository "name"?
+	constraint     *semver.Constraints
 
 	authToken string
 }
@@ -225,15 +228,11 @@ func filterFlavor(tag string, ver semver.Collection) semver.Collection {
 //  $ curl -s -D - -H "Authorization: Bearer $token" -H "Accept: application/vnd.docker.distribution.manifest.v2+json" https://index.docker.io/v2/sourcegraph/server/manifests/3.12.1 | grep Docker-Content-Digest
 //
 func (r *repository) fetchImageDigest(tag string) (string, error) {
-	registry, repo, err := parseRegistry(r.name)
+	req, err := http.NewRequest("GET", r.registry+r.repo+"/manifests/"+tag, nil)
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest("GET", registry+repo+"/manifests/"+tag, nil)
-	if err != nil {
-		return "", err
-	}
-	if registry == "https://index.docker.io/v2/" {
+	if r.authToken != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", r.authToken))
 	}
 	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
@@ -246,6 +245,7 @@ func (r *repository) fetchImageDigest(tag string) (string, error) {
 
 	return resp.Header.Get("Docker-Content-Digest"), nil
 }
+
 func parseRegistry(reg string) (registry, repo string, err error) {
 	val := strings.Split(reg, "/")
 	if len(val) < 3 {
@@ -281,12 +281,11 @@ func fetchAuthToken(repositoryName string) (string, error) {
 // 	$ curl -H "Authorization: Bearer $token" https://index.docker.io/v2/sourcegraph/server/tags/list
 //
 func (r *repository) fetchAllTags() ([]string, error) {
-	registry, repo, err := parseRegistry(r.name)
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s%s/tags/list", registry, repo), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s%s/tags/list", r.registry, r.repo), nil)
 	if err != nil {
 		return nil, err
 	}
-	if registry == "https://index.docker.io/v2/" {
+	if r.authToken != "" {
 		req.Header.Set("Authorization", "Bearer "+r.authToken)
 	}
 
@@ -416,12 +415,21 @@ type options struct {
 }
 
 func newRepository(o *options, repositoryName string) (*repository, error) {
-	token, err := fetchAuthToken(repositoryName)
+	registry, repo, err := parseRegistry(repositoryName)
 	if err != nil {
-		return nil, errors.Wrap(err, "when fetching auth token")
+		return nil, err
+	}
+	var token string
+	if registry == "https://index.docker.io/v2/" {
+		token, err = fetchAuthToken(repositoryName)
+		if err != nil {
+			return nil, errors.Wrap(err, "when fetching auth token")
+		}
 	}
 	return &repository{
 		name:       repositoryName,
+		registry:   registry,
+		repo:       repo,
 		constraint: o.constraints[repositoryName],
 
 		authToken: token,
