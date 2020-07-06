@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var PATTERN = regexp.MustCompile(`\b (\S+.+):(.+)@(sha256:[[:alnum:]]+)`) // https://regex101.com/r/hP8bK1/39
+var defaultPattern = `\b (\S+.+):(.+)@(sha256:[[:alnum:]]+)`
 
 var constraintArgs rawConstraints
 
@@ -45,7 +45,7 @@ Examples:
 		os.Exit(2)
 	}
 	flag.Var(&constraintArgs, "constraint", "(repeatable) add a semver constraint for a given docker image")
-	customPattern := flag.String("pattern", "", "specify a custom regexp to match docker images")
+	pattern := flag.String("pattern", defaultPattern, "specify a custom regexp to match docker images")
 	flag.Parse()
 
 	parsedConstraints, err := constraintArgs.parse()
@@ -58,17 +58,10 @@ Examples:
 		flag.Usage()
 		os.Exit(2)
 	}
-	var tagPattern *regexp.Regexp
-	if *customPattern != "" {
-		var err error
-		tagPattern, err = regexp.Compile(*customPattern)
-		if err != nil {
-			log.Fatalf("failed to parse custom regex: %s", err)
-		}
-	} else {
-		tagPattern = PATTERN
+	tagPattern, err := regexp.Compile(*pattern)
+	if err != nil {
+		log.Fatalf("failed to parse --pattern regex: %s: %s", *pattern, err)
 	}
-
 	o := &options{
 		constraints: parsedConstraints,
 		filePaths:   paths,

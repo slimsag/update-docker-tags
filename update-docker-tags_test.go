@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"testing"
 )
 
@@ -29,7 +30,7 @@ func Test_genericTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PATTERN.FindAllStringSubmatch(tt.image, -1)
+			got := regexp.MustCompile(defaultPattern).FindAllStringSubmatch(tt.image, -1)
 			if got[0][1] != tt.repo {
 				t.Errorf("got = %v, want %v", got, tt.repo)
 			}
