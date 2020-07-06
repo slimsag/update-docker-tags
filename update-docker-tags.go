@@ -101,7 +101,6 @@ func updateDockerTags(o *options, root string) error {
 		data = replaceAllSubmatchFunc(o.tagPattern, data, func(groups [][]byte) [][]byte {
 
 			repositoryName := string(groups[0])
-			repositoryName = qualifyRepository(repositoryName)
 			repository, err := newRepository(o, repositoryName)
 			if err != nil {
 				replaceErr = errors.Wrapf(err, "when initializing repository %q", repositoryName)
@@ -415,6 +414,7 @@ type options struct {
 }
 
 func newRepository(o *options, repositoryName string) (*repository, error) {
+	repositoryName = qualifyRepository(repositoryName)
 	registry, repo, err := parseRegistry(repositoryName)
 	if err != nil {
 		return nil, err
